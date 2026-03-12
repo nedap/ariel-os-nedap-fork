@@ -509,12 +509,12 @@ contexts:
       - defmt
       - probe-rs
     env:
-      RUSTC_TARGET: x86_64-unknown-linux-gnu
-      RUSTFLAGS:
-        # This is needed to keep the linkme sections on native also in combination
-        # with gc-sections.
-        - -Clink-arg=-Wl,-znostart-stop-gc
-      CARGO_TARGET_PREFIX: CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU
+      RUSTC_TARGET: aarch64-apple-darwin
+#      RUSTFLAGS:
+#        # This is needed to keep the linkme sections on native also in combination
+#        # with gc-sections.
+#        - -Clink-arg=-Wl,-znostart-stop-gc
+      CARGO_TARGET_PREFIX: CARGO_TARGET_AARCH64_APPLE_DARWIN
       CARGO_RUNNER: '"sh -c"'
 
   - name: stm32
