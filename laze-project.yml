@@ -505,7 +505,7 @@ contexts:
       - infini-core
       # NOTE: semantically this should only be enabled when `logging` is
       # enabled, but laze does not support conditions on contexts.
-      - logging-over-stdout
+      - ?logging-over-stdout
     provides:
       - has_device_identity
       - has_hwrng
@@ -1980,6 +1980,26 @@ modules:
       global:
         FEATURES:
           - ariel-os/debug-uart
+
+  - name: logging-over-custom-handler
+    help: route the logging output to a handler installed by the application
+    selects:
+      - log # `defmt` does not go through `println!`; see ariel-os-log's dispatch
+    disables:
+      # All of these provide `logging-transport` too, and `logging-over-stdout` is
+      # force-selected by the `native-chip` context.
+      - logging-over-stdout
+      - logging-over-debug-channel
+      - logging-over-usb
+      - logging-over-uart
+      # Only ever selected as a helper by the two transports above.
+      - esp-println
+    provides_unique:
+      - logging-transport
+    env:
+      global:
+        FEATURES:
+          - ariel-os/custom-log-handler
 
   - name: logging-facade-default
     help: 'private: use `logging` instead'

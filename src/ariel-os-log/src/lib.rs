@@ -75,6 +75,7 @@ pub mod log {
     #[cfg(all(
         context = "ariel-os",
         not(any(
+            feature = "custom-log-handler",
             feature = "esp-println",
             feature = "logging-over-uart",
             feature = "std"
@@ -82,22 +83,25 @@ pub mod log {
     ))]
     pub use ariel_os_debug::debug_channel_println as println;
 
-    #[cfg(feature = "esp-println")]
+    #[cfg(feature = "custom-log-handler")]
+    pub use crate::custom_handler_println as println;
+
+    #[cfg(all(feature = "esp-println", not(feature = "custom-log-handler")))]
     pub use esp_println::println;
 
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(feature = "custom-log-handler")))]
     pub use std::println;
 
-    #[cfg(feature = "debug-uart")]
+    #[cfg(all(feature = "debug-uart", not(feature = "custom-log-handler")))]
     pub use crate::uart_println as println;
 
     /// Prints to the logging output, with a newline.
-    #[cfg(not(context = "ariel-os"))]
+    #[cfg(all(not(context = "ariel-os"), not(feature = "custom-log-handler")))]
     #[macro_export]
     macro_rules! noop_println {
         ($($arg:tt)*) => {};
     }
-    #[cfg(not(context = "ariel-os"))]
+    #[cfg(all(not(context = "ariel-os"), not(feature = "custom-log-handler")))]
     pub use crate::noop_println as println;
 }
 
@@ -408,6 +412,52 @@ pub mod backend {
         }};
     }
 }
+
+#[cfg(feature = "custom-log-handler")]
+#[doc(hidden)]
+pub mod custom_handler {
+    use embassy_sync::once_lock::OnceLock;
+
+    /// A handler receiving every line produced on the logging output, already formatted.
+    pub type LogHandler = fn(core::fmt::Arguments<'_>);
+
+    // Populated by a downstream crate, at most once.
+    static LOG_HANDLER: OnceLock<LogHandler> = OnceLock::new();
+
+    /// Installs `handler` as the logging output.
+    ///
+    /// Lines produced before this is called are dropped.
+    ///
+    /// # Errors
+    ///
+    /// Returns the handler back when one has already been installed.
+    pub fn install_log_handler(handler: LogHandler) -> Result<(), LogHandler> {
+        LOG_HANDLER.init(handler)
+    }
+
+    // Based on <https://blog.m-ou.se/format-args/>.
+    #[doc(hidden)]
+    pub fn _print(args: core::fmt::Arguments<'_>) {
+        // Dropping lines is preferable to panicking here: it is recoverable, and there would be no
+        // logging output left to print the panic on, as there can currently only be one transport
+        // at once.
+        if let Some(log_handler) = LOG_HANDLER.try_get() {
+            log_handler(args);
+        }
+    }
+
+    #[doc(hidden)]
+    #[macro_export]
+    macro_rules! custom_handler_println {
+        ($($arg:tt)*) => {{
+            #[expect(clippy::used_underscore_items, reason = "consistency with std::println")]
+            $crate::custom_handler::_print(format_args!("{}\n", format_args!($($arg)*)));
+        }};
+    }
+}
+
+#[cfg(feature = "custom-log-handler")]
+pub use custom_handler::{LogHandler, install_log_handler};
 
 #[doc(hidden)]
 pub fn init() {
