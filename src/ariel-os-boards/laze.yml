@@ -80,8 +80,12 @@ builders:
   parent: esp32-s3-wroom-1
   provides:
   - has_buttons
+  - has_psram
   - has_usb_cdc_acm_port
   - has_usb_device_port
+  env:
+    CARGO_ENV:
+    - ESP_HAL_CONFIG_PSRAM_MODE=octal
 - name: espressif-esp8684-devkitc-02-h2
   parent: esp8684-wroom-02c-h2
   provides:
