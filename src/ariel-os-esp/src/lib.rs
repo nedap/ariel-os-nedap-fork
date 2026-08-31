@@ -7,9 +7,16 @@
 #[cfg(feature = "_radio-esp")]
 extern crate alloc;
 
-mod app_desc {
-    esp_bootloader_esp_idf::esp_app_desc!();
-}
+// Disabled: `esp_app_desc!()` with no arguments bakes in *this crate's* own
+// `CARGO_PKG_VERSION`/`CARGO_PKG_NAME` (env! resolves against whichever crate's
+// source the macro call textually lives in), not the downstream firmware's.
+// The equivalent invocation now lives in `sal-esp32-implementation::hardware::
+// app_desc`, where those env! calls correctly resolve to the firmware's own
+// version. Only one crate in the link may define the `esp_app_desc` symbol, so
+// this and that module must never both be active at once.
+// mod app_desc {
+//     esp_bootloader_esp_idf::esp_app_desc!();
+// }
 
 #[cfg(feature = "_radio-esp")]
 mod radio;
